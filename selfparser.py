@@ -94,15 +94,15 @@ class GridWorld():
         #print("next_pos",index_z, index_y,index_x)    
         postindex_z, postindex_y,postindex_x = np.where(state[5:len(postgrid)] == 1)
        # print("post_pos",postindex_z, postindex_y,postindex_x)    
-        if(crash == True):
-            rew = -1
-        elif(np.array_equiv(state[0:len(pregrid)], state[5:len(postgrid)])):
+        #if(crash == True):
+        #    rew = -1
+        if(np.array_equiv(state[0:len(pregrid)], state[5:len(postgrid)])):
             print("reward of 1")
-            rew = 1
+            rew = 100
             crash = True
-        else:
+        #else:
            # print("no reward")
-            rew = -0.01
+         #   rew = -0.01
             
         return state, rew, crash
         #for oneD_array in (state[0:4]):
@@ -140,7 +140,60 @@ class GridWorld():
 
         state = self.generate_bmpfeatures(temp_list)
         return state
+        
+    def generatelabel_env(self,episode):
+        root_fd = 'datasets/data_easy/train/train/seq'
+        #print(episode)
+        file_name = str(episode) + '_seq.json'
+        file_path = os.path.join(root_fd, file_name)
+        temp_list = []
+        with open(file_path, 'r') as f:
+            distros_dict = json.load(f)
+        myvars = {}
+        for distro in distros_dict:
+            name = distro[0]
+            actions = distros_dict[distro]
+            temp_list.append(distros_dict[distro])
+            ##print(distros_dict[distro])
 
+        
+        #state = self.generate_bmpfeatures(temp_list)
+        return actions
+        
+    def generate_val(self,episode):
+        root_fd = 'datasets/data_easy/val/val/task'
+        print(episode)
+        file_name = str(episode) + '_task.json'
+        file_path = os.path.join(root_fd, file_name)
+        temp_list = []
+        with open(file_path, 'r') as f:
+            distros_dict = json.load(f)
+        myvars = {}
+        for distro in distros_dict:
+            name = distro[0]
+            temp_list.append(distros_dict[distro])
+
+        state = self.generate_bmpfeatures(temp_list)
+        return state
+
+    def generatelabel_val(self,episode):
+        root_fd = 'datasets/data_easy/val/val/seq'
+        #print(episode)
+        file_name = str(episode) + '_seq.json'
+        file_path = os.path.join(root_fd, file_name)
+        temp_list = []
+        with open(file_path, 'r') as f:
+            distros_dict = json.load(f)
+        myvars = {}
+        for distro in distros_dict:
+            name = distro[0]
+            actions = distros_dict[distro]
+            temp_list.append(distros_dict[distro])
+            ##print(distros_dict[distro])
+
+        
+        #state = self.generate_bmpfeatures(temp_list)
+        return actions
     # print(state)
     # next_state(state, 'move')
     # next_state(state, 'turnLeft')

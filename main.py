@@ -17,19 +17,28 @@ learning_rate = 3e-4
 # Constants
 GAMMA = 0.99
 num_steps = 300
-max_episodes = 10000
-
+max_episodes = 25000000
+keep_prob = 1
 class ActorCritic(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_size, learning_rate=3e-4):
         super(ActorCritic, self).__init__()
 
         self.num_actions = num_actions
+  
+        
         self.critic_linear1 = nn.Linear(num_inputs, hidden_size)
         self.critic_linear2 = nn.Linear(hidden_size, 1)
 
         self.actor_linear1 = nn.Linear(num_inputs, hidden_size)
         self.actor_linear2 = nn.Linear(hidden_size, num_actions)
-    
+        
+        # self.cnnlayer1 = torch.nn.Sequential(
+        # torch.nn.Conv2d(9, 36, kernel_size=2, stride=1, padding=0),
+        # torch.nn.ReLU(),
+        # torch.nn.MaxPool2d(kernel_size=2, stride=0),
+        # torch.nn.Dropout(p=1 - keep_prob))
+        # self.cnnlayer2 = nn.Linear(36, num_actions)
+        
     def forward(self, state):
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
         value = F.relu(self.critic_linear1(state))
@@ -37,6 +46,8 @@ class ActorCritic(nn.Module):
         
         policy_dist = F.relu(self.actor_linear1(state))
         policy_dist = F.softmax(self.actor_linear2(policy_dist), dim=1)
+        #policy_dist = F.relu(self.cnnlayer1(state))
+        #policy_dist = F.softmax(self.cnnlayer2(policy_dist), dim=1)
 
         return value, policy_dist
 
@@ -150,27 +161,49 @@ def test(env):
     num_inputs = 144
     num_outputs = 3
     testmodel = ActorCritic(num_inputs, num_outputs, hidden_size)
-    best_model = torch.load('model_10k2.ckpt')
+    best_model = torch.load('2499000model.ckpt')
     testmodel.load_state_dict(best_model)
+    predicted_actions = []
     
-    current_state = env.generate_env(1)
-    done = False
-    steps = 0
+    correct = 0
+    correct_and_min = 0
+    total = 0
+    
     with torch.no_grad():
-        while((done is False) and (steps<100)):        
-            steps += 1
-            value, policy_dist = testmodel(np.ndarray.flatten(current_state))
-            _, predicted = torch.max(policy_dist, 1)
-            new_state,reward, done = env.next_state(current_state,predicted)
-            print(policy_dist)
-            #print(action_list[predicted])
-            current_state = new_state
+        for i in range(100000,100399):
+            current_state = env.generate_val(i)
+            labelled_action = env.generatelabel_val(i)
+            done = False
+            steps = 0
+            while((done is False) and (steps<100)):        
+                steps += 1
+                value, policy_dist = testmodel(np.ndarray.flatten(current_state))
+                _, predicted = torch.max(policy_dist, 1)
+                new_state,reward, done = env.next_state(current_state,predicted)
+                #print(policy_dist)
+                #print(action_list[predicted])
+                predicted_actions.append(action_list[predicted])
+                current_state = new_state
+            total += 1
+            predicted_actions.append('finish')
+            #print(labelled_action)
+            #print(predicted_actions)
+
+            if(labelled_action == predicted_actions):
+                correct_and_min +=1
+            
+            predicted_actions.clear()
+            if (np.array_equiv(current_state[0:len(pregrid)], current_state[5:len(postgrid)])):
+                correct += 1
+                
+    print('Accuracy of the network on the {} test images: {} %'.format(total, 100 * correct / total))
+    print('Accuracy of the network on the {} test images: {} %'.format(total, 100 * correct_and_min / total))
     
 if __name__ == "__main__":
     #env = gym.make("CartPole-v0")
     env = GridWorld()
-    a2c(env) 
-    #test(env)
+    #a2c(env) 
+    test(env)
     
     
     
