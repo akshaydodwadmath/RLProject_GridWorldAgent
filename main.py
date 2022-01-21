@@ -17,36 +17,38 @@ learning_rate = 3e-4
 # Constants
 GAMMA = 0.99
 num_steps = 300
-max_episodes = 25000000
+max_episodes = 200001
+#max_episodes = 1
 keep_prob = 1
 class ActorCritic(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_size, learning_rate=3e-4):
         super(ActorCritic, self).__init__()
 
         self.num_actions = num_actions
-  
-        
         self.critic_linear1 = nn.Linear(num_inputs, hidden_size)
         self.critic_linear2 = nn.Linear(hidden_size, 1)
 
         self.actor_linear1 = nn.Linear(num_inputs, hidden_size)
         self.actor_linear2 = nn.Linear(hidden_size, num_actions)
         
-        # self.cnnlayer1 = torch.nn.Sequential(
-        # torch.nn.Conv2d(9, 36, kernel_size=2, stride=1, padding=0),
-        # torch.nn.ReLU(),
-        # torch.nn.MaxPool2d(kernel_size=2, stride=0),
-        # torch.nn.Dropout(p=1 - keep_prob))
-        # self.cnnlayer2 = nn.Linear(36, num_actions)
-        
+        #self.cnnlayer1 = torch.nn.Sequential(
+        #torch.nn.Conv2d(9,36, kernel_size=2, stride=1, padding=0),
+        #torch.nn.ReLU(),
+        #torch.nn.MaxPool2d(kernel_size=2),
+        #torch.nn.Dropout(p=1 - keep_prob))
+        #self.cnnlayer2 = nn.Linear(36, num_actions )
+    
     def forward(self, state):
+        #flat_state = np.ndarray.flatten(state)
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
         value = F.relu(self.critic_linear1(state))
         value = self.critic_linear2(value)
         
+        #state = Variable(torch.from_numpy(state).float().unsqueeze(0))
         policy_dist = F.relu(self.actor_linear1(state))
         policy_dist = F.softmax(self.actor_linear2(policy_dist), dim=1)
         #policy_dist = F.relu(self.cnnlayer1(state))
+        #policy_dist = policy_dist.view(policy_dist.size(0), -1)   # Flatten them for FC
         #policy_dist = F.softmax(self.cnnlayer2(policy_dist), dim=1)
 
         return value, policy_dist
@@ -71,8 +73,10 @@ def a2c(env):
     #num_inputs = env.observation_space.shape[0]
     #num_outputs = env.action_space.n
     num_inputs = 144
-    num_outputs = 3
+    num_outputs = 4
     actor_critic = ActorCritic(num_inputs, num_outputs, hidden_size)
+    best_model = torch.load('200000ILmodel6.ckpt')
+    actor_critic.load_state_dict(best_model)
     ac_optimizer = optim.Adam(actor_critic.parameters(), lr=learning_rate)
 
     all_lengths = []
@@ -87,20 +91,31 @@ def a2c(env):
 
         #state = env.reset()
         state =  env.generate_env(episode)
+        
         flatten_state = np.ndarray.flatten(state)
+        #flatten_state = state
+        if(episode%3 == 0):
+            actions = env.generatelabel_env(episode)
         for steps in range(num_steps):
             value, policy_dist = actor_critic.forward(flatten_state)
             value = value.detach().numpy()[0,0]
             dist = policy_dist.detach().numpy() 
-
-            action = np.random.choice(num_outputs, p=np.squeeze(dist))
+            
+            #action = np.random.choice(num_outputs, p=[0.3, 0.3, 0.4])
+            
+           # action = np.random.choice(num_outputs, p=np.squeeze(dist))
+            if(episode%3 == 0):
+                action = action_list.index(actions[steps])
+            else:
+                action = np.random.choice(num_outputs, p=np.squeeze(dist))
             #m = Categorical(policy_dist)
             #action = m.sample()
             log_prob = torch.log(policy_dist.squeeze(0)[action])
             entropy = -np.sum(np.mean(dist) * np.log(dist))
             #new_state, reward, done, _ = env.step(action)
-            new_state, reward, done = env.next_state(state,action)
+            new_state, reward, done = env.next_state(state,action,steps)
             flatten_new_state = np.ndarray.flatten(new_state)
+            #flatten_new_state = new_state
             
             rewards.append(reward)
             values.append(value)
@@ -114,7 +129,7 @@ def a2c(env):
                 all_rewards.append(np.sum(rewards))
                 all_lengths.append(steps)
                 average_lengths.append(np.mean(all_lengths[-10:]))
-                if episode % 10 == 0:                    
+                if episode % 4 == 0:                    
                     sys.stdout.write("episode: {}, reward: {}, total length: {}, average length: {} \n".format(episode, np.sum(rewards), steps, average_lengths[-1]))
                 break
         
@@ -137,8 +152,8 @@ def a2c(env):
         ac_optimizer.zero_grad()
         ac_loss.backward()
         ac_optimizer.step()
-
-    torch.save(actor_critic.state_dict(), 'model_10k2.ckpt')    
+        if(episode % 100000 == 0):
+            torch.save(actor_critic.state_dict(), str(200000 + episode) + 'ILmodel6.ckpt')    
     
     # Plot results
     smoothed_rewards = pd.Series.rolling(pd.Series(all_rewards), 10).mean()
@@ -159,9 +174,9 @@ def a2c(env):
     
 def test(env):
     num_inputs = 144
-    num_outputs = 3
+    num_outputs = 4
     testmodel = ActorCritic(num_inputs, num_outputs, hidden_size)
-    best_model = torch.load('2499000model.ckpt')
+    best_model = torch.load('200000ILmodel6.ckpt')
     testmodel.load_state_dict(best_model)
     predicted_actions = []
     
@@ -179,21 +194,21 @@ def test(env):
                 steps += 1
                 value, policy_dist = testmodel(np.ndarray.flatten(current_state))
                 _, predicted = torch.max(policy_dist, 1)
-                new_state,reward, done = env.next_state(current_state,predicted)
+                new_state,reward, done = env.next_state(current_state,predicted,steps)
                 #print(policy_dist)
                 #print(action_list[predicted])
                 predicted_actions.append(action_list[predicted])
                 current_state = new_state
             total += 1
-            predicted_actions.append('finish')
-            #print(labelled_action)
-            #print(predicted_actions)
+            #predicted_actions.append('finish')
+            print(labelled_action)
+            print(predicted_actions)
 
             if(labelled_action == predicted_actions):
                 correct_and_min +=1
             
             predicted_actions.clear()
-            if (np.array_equiv(current_state[0:len(pregrid)], current_state[5:len(postgrid)])):
+            if(np.array_equiv(current_state[0:len(pregrid)], current_state[5:len(postgrid)])):
                 correct += 1
                 
     print('Accuracy of the network on the {} test images: {} %'.format(total, 100 * correct / total))
@@ -202,8 +217,8 @@ def test(env):
 if __name__ == "__main__":
     #env = gym.make("CartPole-v0")
     env = GridWorld()
-    #a2c(env) 
-    test(env)
+    a2c(env) 
+   # test(env)
     
     
     

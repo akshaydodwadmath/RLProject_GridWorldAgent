@@ -6,7 +6,7 @@ pregrid = ['north', 'west', 'south', 'east']
 wall = 4
 postgrid = ['null','null','null','null','null','north', 'west', 'south', 'east']
 
-action_list = ['move', 'turnLeft','turnRight']
+action_list = ['move', 'turnLeft','turnRight','finish']
 
 class GridWorld():
     def generate_bmpfeatures(self,inputlist):
@@ -39,13 +39,16 @@ class GridWorld():
         #print(flatbitmaps)
         return bitmaps
 
-    def next_state(self,state, action):
-        rew = 0
+    def next_state(self,state, action,steps):
+        rew = -1
         #print(action_list[action])
         crash = False
         index_z, index_y,index_x = np.where(state[0:len(pregrid)] == 1)
+        
+        prev_index_z = index_z
         #print ("current_pos",index_z, index_y,index_x)
-        state[index_z, index_y,index_x] = 0
+        if( action_list[action] != 'finish'):
+            state[index_z, index_y,index_x] = 0
         
         if( action_list[action] == 'move'):
             if( index_z == pregrid.index('north')): #north
@@ -59,15 +62,18 @@ class GridWorld():
             if(index_x > 3 or index_y > 3):
                 #rew = -1
                 crash = True
+                state[0:len(pregrid), :,:] =np.zeros((len(pregrid), 4,  4))
                 print("crash")
             elif(index_x < 0 or index_y < 0):
-                #rew = -1
+               # rew = -1
                 crash = True
+                state[0:len(pregrid), :,:] =np.zeros((len(pregrid), 4,  4))
                 print("crash")
             elif(state[wall,index_y,index_x] == 1):
-                #rew = -1
+               # rew = -1
                 crash = True
-                print("crash")
+                state[0:len(pregrid), :,:] =np.zeros((len(pregrid), 4,  4))
+                print("crash: Wall")
             else:
                 state[index_z,index_y,index_x] = 1
         if( action_list[action] == 'turnLeft'):
@@ -81,6 +87,7 @@ class GridWorld():
                 index_z = pregrid.index('north')
             state[index_z,index_y,index_x] = 1
         if( action_list[action] == 'turnRight'):
+
             if( index_z == pregrid.index('north')): #north
                 index_z = pregrid.index('east')
             elif( index_z == pregrid.index('south')): #south
@@ -94,35 +101,32 @@ class GridWorld():
         #print("next_pos",index_z, index_y,index_x)    
         postindex_z, postindex_y,postindex_x = np.where(state[5:len(postgrid)] == 1)
        # print("post_pos",postindex_z, postindex_y,postindex_x)    
-        #if(crash == True):
-        #    rew = -1
+
+        if(action_list[action] == 'finish'):
+            if(np.array_equiv(state[0:len(pregrid)], state[5:len(postgrid)])):
+                print("reward of 10",action_list[action])
+                state[0:len(pregrid), :,:] =np.ones((len(pregrid), 4,  4))
+                rew = 10
+                crash = True
+            else:
+                crash = True
+                state[0:len(pregrid), :,:] =np.zeros((len(pregrid), 4,  4))
+                print("crash: Finish")
         if(np.array_equiv(state[0:len(pregrid)], state[5:len(postgrid)])):
-            print("reward of 1")
-            rew = 100
-            crash = True
+            rew = 5
+            print("reward of 5",action_list[action])
+            #crash = True
+               # rew = -1
+        #elif(crash == False):
+         #   if((prev_index_z != index_z) and (postindex_z == index_z)):
+          #      print("reward of 1")
+           #     rew = 1
+        
         #else:
            # print("no reward")
-         #   rew = -0.01
+         #   rew = -0.1
             
         return state, rew, crash
-        #for oneD_array in (state[0:4]):
-         #   if (1 in oneD_array):
-          #      index_y,index_x = np.where(threeD_array == 1)
-           #     print ("index",index_y,index_x)
-        # if action == 'move':
-            # col = max(col - 1, 0)
-        # elif action == DOWN:
-            # row = min(row + 1, nrow - 1)
-        # elif action == RIGHT:
-            # col = min(col + 1, ncol - 1)
-        # elif action == UP:
-            # row = max(row - 1, 0)
-            
-    #json_data = '{"a": 1, "b": 2, "c": 3, "d": 4, "e": 5}'
-    #loaded_json = json.loads(json_data)
-    #for x in loaded_json:
-    #	print("%s: %d" % (x, loaded_json[x]))
-        
 
 
     def generate_env(self,episode):
@@ -140,11 +144,11 @@ class GridWorld():
 
         state = self.generate_bmpfeatures(temp_list)
         return state
-        
+
     def generatelabel_env(self,episode):
         root_fd = 'datasets/data_easy/train/train/seq'
         #print(episode)
-        file_name = str(episode) + '_seq.json'
+        file_name = str(episode%4000) + '_seq.json'
         file_path = os.path.join(root_fd, file_name)
         temp_list = []
         with open(file_path, 'r') as f:
@@ -161,7 +165,7 @@ class GridWorld():
         return actions
         
     def generate_val(self,episode):
-        root_fd = 'datasets/data_easy/val/val/task'
+        root_fd = 'datasets/data_easy/val/task'
         print(episode)
         file_name = str(episode) + '_task.json'
         file_path = os.path.join(root_fd, file_name)
@@ -177,7 +181,7 @@ class GridWorld():
         return state
 
     def generatelabel_val(self,episode):
-        root_fd = 'datasets/data_easy/val/val/seq'
+        root_fd = 'datasets/data_easy/val/seq'
         #print(episode)
         file_name = str(episode) + '_seq.json'
         file_path = os.path.join(root_fd, file_name)
@@ -189,10 +193,7 @@ class GridWorld():
             name = distro[0]
             actions = distros_dict[distro]
             temp_list.append(distros_dict[distro])
-            ##print(distros_dict[distro])
 
-        
-        #state = self.generate_bmpfeatures(temp_list)
         return actions
     # print(state)
     # next_state(state, 'move')
