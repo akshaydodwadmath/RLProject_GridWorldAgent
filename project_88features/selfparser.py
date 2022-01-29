@@ -1,7 +1,7 @@
 import json
 import os
 import numpy as np
-
+import random 
 pregrid_pos = 0
 postgrid_pos = 1
 wall = 2
@@ -15,7 +15,7 @@ directions = ['north', 'west', 'south', 'east']
 
 postgrid = ['null','null','null','null','null','north', 'west', 'south', 'east']
 
-action_list = ['move', 'turnLeft','turnRight','finish']
+action_list = ['move', 'turnLeft','turnRight', 'pickMarker', 'putMarker', 'finish']
 flag = 0
 class GridWorld():
     def generate_bmpfeatures(self,inputlist):
@@ -106,21 +106,24 @@ class GridWorld():
             elif( index_z == directions.index('east')): #east
                 index_x = index_x + 1
             if(index_x > 3 or index_y > 3):
-                #rew = -1
+             #   rew = -0.1
                 crash = True
-                state1[pregrid_pos, :,:] =np.zeros( (4,  4))
+                #state1[pregrid_pos, :,:] =np.zeros( (4,  4))
+                #state1[pregrid_pos, 0,:] =np.ones( (4, ))
                 print("crash")
                 #rew = -50
             elif(index_x < 0 or index_y < 0):
-               # rew = -1
+            #    rew = -0.1
                 crash = True
-                state1[pregrid_pos, :,:] =np.zeros((4,  4))
+                #state1[pregrid_pos, :,:] =np.zeros((4,  4))
+                #state1[pregrid_pos, 1,:] =np.ones( (4, ))
                 print("crash")
                # rew = -50
             elif(state1[wall,index_y,index_x] == 1):
-               # rew = -1
+             #   rew = -0.3
                 crash = True
-                state1[pregrid_pos, :,:] =np.zeros(( 4,  4))
+                #state1[pregrid_pos,index_y,index_x] = 1
+              #  state1[pregrid_pos, :,:] =np.zeros(( 4,  4))
                 print("crash: Wall")
               #  rew = -50
             else:
@@ -148,6 +151,30 @@ class GridWorld():
                 index_z = directions.index('south')
             state2[pregrid_ori,index_z, 0] = 1
         
+        if( action_list[action] == 'pickMarker'):
+            if(state1[pregrid_mark, index_y, index_x]  == 1): 
+                state1[pregrid_mark, index_y, index_x] = 0
+                #if(np.array_equiv(state1[pregrid_mark, index_y, index_x], state1[postgrid_mark, index_y, index_x])):
+                #    rew =  100
+            else:
+             #   rew = -0.3
+                crash = True
+              #  state1[pregrid_pos, :,:] =np.zeros(( 4,  4))
+             #   state1[pregrid_pos, 2,:] =np.ones( (4, ))
+                
+                print("crash: pickMarker")
+                
+        if( action_list[action] == 'putMarker'):
+            if(state1[pregrid_mark, index_y, index_x]  == 0): 
+                state1[pregrid_mark, index_y, index_x] = 1
+                #if(np.array_equiv(state1[pregrid_mark, index_y, index_x], state1[postgrid_mark, index_y, index_x])):
+                #    rew =  100
+            else:
+              #  rew = -0.3
+                crash = True
+              #  state1[pregrid_pos, :,:] =np.zeros(( 4,  4))
+             #   state1[pregrid_pos, 3,:] =np.ones( (4, ))
+                print("crash: putMarker")
       #  print(state1)
       #  print(state2)
         
@@ -170,9 +197,9 @@ class GridWorld():
             #    state[0:len(pregrid), :,:] =np.zeros((len(pregrid), 4,  4))
             ##    print("crash: Finish")
         if((np.array_equiv(state1[pregrid_pos], state1[postgrid_pos])) and (np.array_equiv(state2[pregrid_ori], state2[postgrid_ori]))):
-            rew = 100
+            rew = 1
             print("reward of 100 ",action_list[action])
-            state1[pregrid_pos, :,:] =np.ones(( 4,  4))
+          #  state1[pregrid_pos, :,:] =np.ones(( 4,  4))
             #flag = 1
             finish = True
             crash = True
@@ -192,9 +219,11 @@ class GridWorld():
     def generate_env(self,episode):
         global flag
         flag = 0
-        root_fd = 'datasets/data_easy/train/train/task'
+        root_fd = 'datasets/data_medium/train/train/task'
+        
+        
         print(episode)
-        file_name = str(episode%4000) + '_task.json'
+        file_name = str(episode) + '_task.json'
         file_path = os.path.join(root_fd, file_name)
         temp_list = []
         with open(file_path, 'r') as f:
@@ -209,9 +238,9 @@ class GridWorld():
     
 
     def generatelabel_env(self,episode):
-        root_fd = 'datasets/data_easy/train/train/seq'
+        root_fd = 'datasets/data_medium/train/train/seq'
         #print(episode)
-        file_name = str(episode%4000) + '_seq.json'
+        file_name = str(episode) + '_seq.json'
         file_path = os.path.join(root_fd, file_name)
         temp_list = []
         with open(file_path, 'r') as f:
@@ -233,7 +262,7 @@ class GridWorld():
         return actions
         
     def generate_val(self,episode):
-        root_fd = 'datasets/data_easy/val/val/task'
+        root_fd = 'datasets/data_medium/val/val/task'
         print(episode)
         file_name = str(episode) + '_task.json'
         file_path = os.path.join(root_fd, file_name)
@@ -249,7 +278,7 @@ class GridWorld():
         return state
 
     def generatelabel_val(self,episode):
-        root_fd = 'datasets/data_easy/val/val/seq'
+        root_fd = 'datasets/data_medium/val/val/seq'
         #print(episode)
         file_name = str(episode) + '_seq.json'
         file_path = os.path.join(root_fd, file_name)
