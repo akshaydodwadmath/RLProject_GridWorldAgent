@@ -19,7 +19,7 @@ learning_rate = 3e-4
 # Constants
 GAMMA = 0.99
 num_steps = 100
-max_episodes = 12000
+max_episodes = 24000
 #max_episodes = 1
 drop_prob = 0
 class ActorCritic(nn.Module):
@@ -88,8 +88,8 @@ def a2c(env):
     num_inputs = 88
     num_outputs = 5
     actor_critic = ActorCritic(num_inputs, num_outputs, hidden_size)
-  #  best_model = torch.load('1100000longrun1.ckpt')
-  #  actor_critic.load_state_dict(best_model)
+    best_model = torch.load('23999longrunFULL9.ckpt')
+    actor_critic.load_state_dict(best_model)
     ac_optimizer = optim.Adam(actor_critic.parameters(), lr=learning_rate)
    # scheduler_cosine = torch.optim.lr_scheduler.CosineAnnealingLR(ac_optimizer, max_episodes)
    # scheduler_warmup = GradualWarmupScheduler(ac_optimizer, multiplier=15.0, total_epoch=10, after_scheduler=scheduler_cosine)
@@ -101,7 +101,8 @@ def a2c(env):
     avg_rewards = 0
     acc_rew_step = 0
     iter_num = 0
-    prev_avg_rewards = 0
+    lost_epi = 0
+    lost_epi_list = []
     for episode in range(max_episodes):
         while(1) :
             iter_num += 1
@@ -144,8 +145,8 @@ def a2c(env):
                     action = action_list.index(actions[steps])
                  #   print('bestaction',action_list[action])
                 else :
-                   # action = np.random.choice(num_outputs, p=np.squeeze(dist))
-                    action = predicted
+                    action = np.random.choice(num_outputs, p=np.squeeze(dist))
+                  #  action = predicted
                  #   print('action',action_list[action])
                 
                # action = np.random.choice(num_outputs, p=np.squeeze(dist))
@@ -208,8 +209,8 @@ def a2c(env):
             ac_loss.backward()
             ac_optimizer.step()
             
-            if(episode % 100 == 0):
-                torch.save(actor_critic.state_dict(), str( episode) + 'longrunFULL6.ckpt')    
+            if((episode % 100 == 0) or (episode == (max_episodes-1))):
+                torch.save(actor_critic.state_dict(), str( episode) + 'secondrun1.ckpt')    
             acc_rew_step +=1
             if(acc_rew_step == 100):
                 avg_rewards = sum(all_rewards) / (acc_rew_step)
@@ -220,11 +221,16 @@ def a2c(env):
                 # prev_avg_rewards = avg_rewards
                 # torch.save(actor_critic.state_dict(), str( episode) + 'bestmodel.ckpt')    
                 # #flag = 1
-            if(avg_rewards>0.9):
-                avg_rewards = 0
+           # if (iter_num>100):
+           #     lost_epi = lost_epi+1
+           #     lost_epi_list.append(episode)
+            if(avg_rewards>0.9 or (iter_num>100) ):
+               # avg_rewards = 0
                 iter_num = 0
                 break
     # Plot results
+    print("Lost Episodes Count:", lost_epi)
+    print("Lost Episodes :", lost_epi_list)
     smoothed_rewards = pd.Series.rolling(pd.Series(all_rewards), 10).mean()
     smoothed_rewards = [elem for elem in smoothed_rewards]
     plt.plot(all_rewards)
@@ -245,7 +251,7 @@ def test(env):
     num_inputs = 88
     num_outputs = 5
     testmodel = ActorCritic(num_inputs, num_outputs, hidden_size)
-    best_model = torch.load('11900longrunFULL6.ckpt')
+    best_model = torch.load('23999longrunFULL9.ckpt')
     testmodel.load_state_dict(best_model)
     predicted_actions = []
     
@@ -253,7 +259,7 @@ def test(env):
     correct_and_min = 0
     total = 0
     with torch.no_grad():
-        for i in range(100000,101199):
+        for i in range(100000,102399):
             bitmaps4x4, bitmaps4x1 = env.generate_val(i)
             flatten_state1 = np.ndarray.flatten(bitmaps4x4)
             flatten_state2 = np.ndarray.flatten(bitmaps4x1)
@@ -281,12 +287,15 @@ def test(env):
             print(labelled_action)
             print(predicted_actions)
 
-            if(labelled_action == predicted_actions):
-                correct_and_min +=1
             
-            predicted_actions.clear()
+            
+            
             if((np.array_equiv(bitmaps4x4[pregrid_pos], bitmaps4x4[postgrid_pos])) and (np.array_equiv(bitmaps4x1[pregrid_ori], bitmaps4x1[postgrid_ori]))):
                 correct += 1
+                if(len(labelled_action) >= len(predicted_actions)):
+                    correct_and_min +=1
+                    
+            predicted_actions.clear()
            # if(np.array_equiv(new_bitmaps4x4[pregrid_pos], np.ones(( 4,  4)))):
            #     correct += 1
                 
@@ -296,8 +305,8 @@ def test(env):
 if __name__ == "__main__":
     #env = gym.make("CartPole-v0")
     env = GridWorld()
-    a2c(env) 
-   # test(env)
+   # a2c(env) 
+    test(env)
     
     
     

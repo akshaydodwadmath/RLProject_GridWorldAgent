@@ -219,7 +219,7 @@ class GridWorld():
     def generate_env(self,episode):
         global flag
         flag = 0
-        root_fd = 'datasets/data_medium/train/train/task'
+        root_fd = 'datasets/data/train/train/task'
         
         
         print(episode)
@@ -238,7 +238,7 @@ class GridWorld():
     
 
     def generatelabel_env(self,episode):
-        root_fd = 'datasets/data_medium/train/train/seq'
+        root_fd = 'datasets/data/train/train/seq'
         #print(episode)
         file_name = str(episode) + '_seq.json'
         file_path = os.path.join(root_fd, file_name)
@@ -262,7 +262,7 @@ class GridWorld():
         return actions
         
     def generate_val(self,episode):
-        root_fd = 'datasets/data_medium/val/val/task'
+        root_fd = 'datasets/data/val/val/task'
         print(episode)
         file_name = str(episode) + '_task.json'
         file_path = os.path.join(root_fd, file_name)
@@ -278,7 +278,7 @@ class GridWorld():
         return state
 
     def generatelabel_val(self,episode):
-        root_fd = 'datasets/data_medium/val/val/seq'
+        root_fd = 'datasets/data/val/val/seq'
         #print(episode)
         file_name = str(episode) + '_seq.json'
         file_path = os.path.join(root_fd, file_name)
