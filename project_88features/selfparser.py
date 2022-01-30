@@ -196,7 +196,9 @@ class GridWorld():
                 #rew = -5
             #    state[0:len(pregrid), :,:] =np.zeros((len(pregrid), 4,  4))
             ##    print("crash: Finish")
-        if((np.array_equiv(state1[pregrid_pos], state1[postgrid_pos])) and (np.array_equiv(state2[pregrid_ori], state2[postgrid_ori]))):
+        if((np.array_equiv(state1[pregrid_pos], state1[postgrid_pos])) and
+        (np.array_equiv(state1[pregrid_mark], state1[postgrid_mark])) and
+         (np.array_equiv(state2[pregrid_ori], state2[postgrid_ori]))):
             rew = 1
             print("reward of 100 ",action_list[action])
           #  state1[pregrid_pos, :,:] =np.ones(( 4,  4))

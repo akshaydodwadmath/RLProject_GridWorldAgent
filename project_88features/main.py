@@ -88,7 +88,7 @@ def a2c(env):
     num_inputs = 88
     num_outputs = 5
     actor_critic = ActorCritic(num_inputs, num_outputs, hidden_size)
-    best_model = torch.load('23999longrunFULL9.ckpt')
+    best_model = torch.load('23999secondrun7_2.ckpt')
     actor_critic.load_state_dict(best_model)
     ac_optimizer = optim.Adam(actor_critic.parameters(), lr=learning_rate)
    # scheduler_cosine = torch.optim.lr_scheduler.CosineAnnealingLR(ac_optimizer, max_episodes)
@@ -103,7 +103,7 @@ def a2c(env):
     iter_num = 0
     lost_epi = 0
     lost_epi_list = []
-    for episode in range(max_episodes):
+    for episode in range( max_episodes):
         while(1) :
             iter_num += 1
             print('iter',iter_num)
@@ -209,8 +209,8 @@ def a2c(env):
             ac_loss.backward()
             ac_optimizer.step()
             
-            if((episode % 100 == 0) or (episode == (max_episodes-1))):
-                torch.save(actor_critic.state_dict(), str( episode) + 'secondrun1.ckpt')    
+            if((episode % 1000 == 0) or (episode == (max_episodes-1))):
+                torch.save(actor_critic.state_dict(), str( episode) + 'secondrun8.ckpt')    
             acc_rew_step +=1
             if(acc_rew_step == 100):
                 avg_rewards = sum(all_rewards) / (acc_rew_step)
@@ -221,11 +221,11 @@ def a2c(env):
                 # prev_avg_rewards = avg_rewards
                 # torch.save(actor_critic.state_dict(), str( episode) + 'bestmodel.ckpt')    
                 # #flag = 1
-           # if (iter_num>100):
-           #     lost_epi = lost_epi+1
-           #     lost_epi_list.append(episode)
-            if(avg_rewards>0.9 or (iter_num>100) ):
-               # avg_rewards = 0
+            if (iter_num>500):
+                lost_epi = lost_epi+1
+                lost_epi_list.append(episode)
+            if(avg_rewards>0.95 or (iter_num>500) ):
+                #avg_rewards = 0
                 iter_num = 0
                 break
     # Plot results
@@ -251,7 +251,7 @@ def test(env):
     num_inputs = 88
     num_outputs = 5
     testmodel = ActorCritic(num_inputs, num_outputs, hidden_size)
-    best_model = torch.load('23999longrunFULL9.ckpt')
+    best_model = torch.load('23999secondrun8.ckpt')
     testmodel.load_state_dict(best_model)
     predicted_actions = []
     
@@ -290,7 +290,9 @@ def test(env):
             
             
             
-            if((np.array_equiv(bitmaps4x4[pregrid_pos], bitmaps4x4[postgrid_pos])) and (np.array_equiv(bitmaps4x1[pregrid_ori], bitmaps4x1[postgrid_ori]))):
+            if((np.array_equiv(bitmaps4x4[pregrid_pos], bitmaps4x4[postgrid_pos])) and
+        (np.array_equiv(bitmaps4x4[pregrid_mark], bitmaps4x4[postgrid_mark])) and
+         (np.array_equiv(bitmaps4x1[pregrid_ori], bitmaps4x1[postgrid_ori]))):
                 correct += 1
                 if(len(labelled_action) >= len(predicted_actions)):
                     correct_and_min +=1
